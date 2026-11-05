@@ -1,0 +1,555 @@
+{
+  "config": {
+    "seed": 42,
+    "window": {
+      "history_start_d": 1500,
+      "plan_start_d": 1914,
+      "plan_days": 28,
+      "forecast_lookback_days": 28
+    },
+    "layout": {
+      "items_per_bay": 24,
+      "bays_per_aisle": 8,
+      "bay_width_ft": 12,
+      "aisle_spacing_ft": 24,
+      "front_aisle_ft": 30,
+      "walk_ft_per_min": 150
+    },
+    "shelf": {
+      "days_of_cover": 4,
+      "min_capacity": 4,
+      "reorder_fraction": 0.35,
+      "start_fraction": 0.8
+    },
+    "durations": {
+      "restock_setup": 6,
+      "restock_per_unit": 0.12,
+      "restock_per_item": 0.4,
+      "price_setup": 3,
+      "price_per_label": 1.5,
+      "reset_per_bay": 45
+    },
+    "resets": {
+      "bays_per_day": 2
+    },
+    "priority": {
+      "weights": {
+        "high": 1000,
+        "medium": 30,
+        "low": 10
+      },
+      "price_deadline_min": 720
+    },
+    "staff": {
+      "shifts": [
+        {
+          "id": "A1",
+          "start": 360,
+          "end": 870,
+          "skills": [
+            "R",
+            "P"
+          ]
+        },
+        {
+          "id": "A2",
+          "start": 360,
+          "end": 870,
+          "skills": [
+            "R",
+            "S"
+          ]
+        },
+        {
+          "id": "A3",
+          "start": 600,
+          "end": 1110,
+          "skills": [
+            "R",
+            "P",
+            "S"
+          ]
+        },
+        {
+          "id": "A4",
+          "start": 840,
+          "end": 1350,
+          "skills": [
+            "R"
+          ]
+        }
+      ]
+    },
+    "solver": {
+      "slot_min": 15,
+      "time_limit_s": 3,
+      "workers": 4,
+      "travel_weight": 1,
+      "priority_scale": 10
+    }
+  },
+  "python": "3.11.15",
+  "stores": [
+    "CA_1",
+    "CA_2"
+  ],
+  "days": 7,
+  "runtime_s": 182.0,
+  "paired": [
+    {
+      "staffing": "3 associates (A4 out)",
+      "policy": "cpsat",
+      "tasks": 1694,
+      "done": 1345,
+      "high_total": 1193,
+      "high_done": 1125,
+      "medium_total": 501,
+      "medium_done": 220,
+      "travel_min": 1431,
+      "work_min": 17606,
+      "demand_min": 24161,
+      "shift_min": 21420,
+      "weight_done": 1131600,
+      "high_coverage": 0.943,
+      "travel_per_task": 1.0639,
+      "load_ratio": 1.128
+    },
+    {
+      "staffing": "3 associates (A4 out)",
+      "policy": "fcfs",
+      "tasks": 1694,
+      "done": 1316,
+      "high_total": 1193,
+      "high_done": 872,
+      "medium_total": 501,
+      "medium_done": 444,
+      "travel_min": 1365,
+      "work_min": 17646,
+      "demand_min": 24161,
+      "shift_min": 21420,
+      "weight_done": 885320,
+      "high_coverage": 0.7309,
+      "travel_per_task": 1.0372,
+      "load_ratio": 1.128
+    },
+    {
+      "staffing": "3 associates (A4 out)",
+      "policy": "greedy",
+      "tasks": 1694,
+      "done": 1259,
+      "high_total": 1193,
+      "high_done": 1099,
+      "medium_total": 501,
+      "medium_done": 160,
+      "travel_min": 1266,
+      "work_min": 17774,
+      "demand_min": 24161,
+      "shift_min": 21420,
+      "weight_done": 1103800,
+      "high_coverage": 0.9212,
+      "travel_per_task": 1.0056,
+      "load_ratio": 1.128
+    },
+    {
+      "staffing": "4 associates",
+      "policy": "cpsat",
+      "tasks": 1684,
+      "done": 1658,
+      "high_total": 1086,
+      "high_done": 1086,
+      "medium_total": 598,
+      "medium_done": 572,
+      "travel_min": 1857,
+      "work_min": 21180,
+      "demand_min": 22087,
+      "shift_min": 28560,
+      "weight_done": 1103160,
+      "high_coverage": 1.0,
+      "travel_per_task": 1.12,
+      "load_ratio": 0.7734
+    },
+    {
+      "staffing": "4 associates",
+      "policy": "fcfs",
+      "tasks": 1684,
+      "done": 1645,
+      "high_total": 1086,
+      "high_done": 1069,
+      "medium_total": 598,
+      "medium_done": 576,
+      "travel_min": 1720,
+      "work_min": 21024,
+      "demand_min": 22087,
+      "shift_min": 28560,
+      "weight_done": 1086280,
+      "high_coverage": 0.9843,
+      "travel_per_task": 1.0456,
+      "load_ratio": 0.7734
+    },
+    {
+      "staffing": "4 associates",
+      "policy": "greedy",
+      "tasks": 1684,
+      "done": 1660,
+      "high_total": 1086,
+      "high_done": 1086,
+      "medium_total": 598,
+      "medium_done": 574,
+      "travel_min": 1697,
+      "work_min": 21202,
+      "demand_min": 22087,
+      "shift_min": 28560,
+      "weight_done": 1103220,
+      "high_coverage": 1.0,
+      "travel_per_task": 1.0223,
+      "load_ratio": 0.7734
+    }
+  ],
+  "closed_loop": [
+    {
+      "staffing": "3 associates (A4 out)",
+      "policy": "cpsat",
+      "tasks": 1735,
+      "done": 1356,
+      "high_total": 1144,
+      "high_done": 1094,
+      "medium_total": 591,
+      "medium_done": 262,
+      "travel_min": 1446,
+      "work_min": 17580,
+      "demand_min": 25682,
+      "shift_min": 21420,
+      "weight_done": 1101860,
+      "high_coverage": 0.9563,
+      "travel_per_task": 1.0664,
+      "load_ratio": 1.199,
+      "lost_units": 4577.8402,
+      "demand_units": 64032.0,
+      "price_labels_due_today": 41,
+      "price_labels_on_time": 41,
+      "lost_share": 0.0715,
+      "backlog_reset_end": 24,
+      "backlog_price_end": 0
+    },
+    {
+      "staffing": "3 associates (A4 out)",
+      "policy": "fcfs",
+      "tasks": 1694,
+      "done": 1316,
+      "high_total": 1193,
+      "high_done": 872,
+      "medium_total": 501,
+      "medium_done": 444,
+      "travel_min": 1365,
+      "work_min": 17646,
+      "demand_min": 24161,
+      "shift_min": 21420,
+      "weight_done": 885320,
+      "high_coverage": 0.7309,
+      "travel_per_task": 1.0372,
+      "load_ratio": 1.128,
+      "lost_units": 5417.102,
+      "demand_units": 64032.0,
+      "price_labels_due_today": 41,
+      "price_labels_on_time": 41,
+      "lost_share": 0.0846,
+      "backlog_reset_end": 4,
+      "backlog_price_end": 0
+    },
+    {
+      "staffing": "3 associates (A4 out)",
+      "policy": "greedy",
+      "tasks": 1703,
+      "done": 1286,
+      "high_total": 1155,
+      "high_done": 1085,
+      "medium_total": 548,
+      "medium_done": 201,
+      "travel_min": 1298,
+      "work_min": 17749,
+      "demand_min": 23870,
+      "shift_min": 21420,
+      "weight_done": 1091030,
+      "high_coverage": 0.9394,
+      "travel_per_task": 1.0093,
+      "load_ratio": 1.1144,
+      "lost_units": 4007.1637,
+      "demand_units": 64032.0,
+      "price_labels_due_today": 41,
+      "price_labels_on_time": 41,
+      "lost_share": 0.0626,
+      "backlog_reset_end": 12,
+      "backlog_price_end": 0
+    },
+    {
+      "staffing": "4 associates",
+      "policy": "cpsat",
+      "tasks": 1671,
+      "done": 1654,
+      "high_total": 1093,
+      "high_done": 1093,
+      "medium_total": 578,
+      "medium_done": 561,
+      "travel_min": 1842,
+      "work_min": 21042,
+      "demand_min": 21597,
+      "shift_min": 28560,
+      "weight_done": 1109830,
+      "high_coverage": 1.0,
+      "travel_per_task": 1.1137,
+      "load_ratio": 0.7562,
+      "lost_units": 3241.6873,
+      "demand_units": 64032.0,
+      "price_labels_due_today": 41,
+      "price_labels_on_time": 41,
+      "lost_share": 0.0506,
+      "backlog_reset_end": 5,
+      "backlog_price_end": 0
+    },
+    {
+      "staffing": "4 associates",
+      "policy": "fcfs",
+      "tasks": 1684,
+      "done": 1645,
+      "high_total": 1086,
+      "high_done": 1069,
+      "medium_total": 598,
+      "medium_done": 576,
+      "travel_min": 1720,
+      "work_min": 21024,
+      "demand_min": 22087,
+      "shift_min": 28560,
+      "weight_done": 1086280,
+      "high_coverage": 0.9843,
+      "travel_per_task": 1.0456,
+      "load_ratio": 0.7734,
+      "lost_units": 3221.9775,
+      "demand_units": 64032.0,
+      "price_labels_due_today": 41,
+      "price_labels_on_time": 41,
+      "lost_share": 0.0503,
+      "backlog_reset_end": 4,
+      "backlog_price_end": 0
+    },
+    {
+      "staffing": "4 associates",
+      "policy": "greedy",
+      "tasks": 1677,
+      "done": 1653,
+      "high_total": 1104,
+      "high_done": 1104,
+      "medium_total": 573,
+      "medium_done": 549,
+      "travel_min": 1689,
+      "work_min": 21051,
+      "demand_min": 21934,
+      "shift_min": 28560,
+      "weight_done": 1120470,
+      "high_coverage": 1.0,
+      "travel_per_task": 1.0218,
+      "load_ratio": 0.768,
+      "lost_units": 3063.0951,
+      "demand_units": 64032.0,
+      "price_labels_due_today": 41,
+      "price_labels_on_time": 41,
+      "lost_share": 0.0478,
+      "backlog_reset_end": 7,
+      "backlog_price_end": 0
+    }
+  ],
+  "paired_differences": {
+    "4 associates": {
+      "store_days": 14,
+      "cpsat_minus_fcfs_high_coverage": {
+        "mean": 0.0119,
+        "ci95": [
+          0.0,
+          0.0268
+        ]
+      },
+      "cpsat_minus_greedy_high_coverage": {
+        "mean": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ]
+      },
+      "cpsat_minus_fcfs_high_done": 17,
+      "cpsat_minus_greedy_high_done": 0,
+      "days_cpsat_high_lt_greedy": 0,
+      "days_cpsat_high_gt_greedy": 0
+    },
+    "3 associates (A4 out)": {
+      "store_days": 14,
+      "cpsat_minus_fcfs_high_coverage": {
+        "mean": 0.1984,
+        "ci95": [
+          0.1574,
+          0.2314
+        ]
+      },
+      "cpsat_minus_greedy_high_coverage": {
+        "mean": 0.0179,
+        "ci95": [
+          0.0021,
+          0.036
+        ]
+      },
+      "cpsat_minus_fcfs_high_done": 253,
+      "cpsat_minus_greedy_high_done": 26,
+      "days_cpsat_high_lt_greedy": 1,
+      "days_cpsat_high_gt_greedy": 5
+    }
+  },
+  "solver": {
+    "median_s": 3.048,
+    "p95_s": 3.232,
+    "max_s": 3.304,
+    "optimal_share": 0.464,
+    "tasks_median": 132,
+    "tasks_max": 154,
+    "repairs_total": 115,
+    "fills_total": 40
+  },
+  "ablation": [
+    {
+      "store_id": "CA_1",
+      "variant": "greedy",
+      "tasks": 146,
+      "high_total": 100,
+      "high_done": 59,
+      "done": 61,
+      "travel_min": 61,
+      "violations": 0,
+      "solve_s": null,
+      "status": null
+    },
+    {
+      "store_id": "CA_1",
+      "variant": "assignment (main)",
+      "tasks": 146,
+      "high_total": 100,
+      "high_done": 64,
+      "done": 67,
+      "travel_min": 73,
+      "violations": 0,
+      "solve_s": 10.196,
+      "status": "FEASIBLE"
+    },
+    {
+      "store_id": "CA_1",
+      "variant": "circuit, 1 min grid",
+      "tasks": 146,
+      "high_total": 100,
+      "high_done": 53,
+      "done": 63,
+      "travel_min": 66,
+      "violations": 0,
+      "solve_s": 10.158,
+      "status": "FEASIBLE"
+    },
+    {
+      "store_id": "CA_1",
+      "variant": "circuit, 15 min grid",
+      "tasks": 146,
+      "high_total": 100,
+      "high_done": 44,
+      "done": 51,
+      "travel_min": 56,
+      "violations": 0,
+      "solve_s": 10.112,
+      "status": "FEASIBLE"
+    },
+    {
+      "store_id": "CA_1",
+      "variant": "circuit, 1 min, greedy warm start",
+      "tasks": 146,
+      "high_total": 100,
+      "high_done": 59,
+      "done": 61,
+      "travel_min": 61,
+      "violations": 0,
+      "solve_s": 10.163,
+      "status": "FEASIBLE"
+    },
+    {
+      "store_id": "CA_2",
+      "variant": "greedy",
+      "tasks": 154,
+      "high_total": 120,
+      "high_done": 68,
+      "done": 69,
+      "travel_min": 69,
+      "violations": 0,
+      "solve_s": null,
+      "status": null
+    },
+    {
+      "store_id": "CA_2",
+      "variant": "assignment (main)",
+      "tasks": 154,
+      "high_total": 120,
+      "high_done": 72,
+      "done": 74,
+      "travel_min": 77,
+      "violations": 0,
+      "solve_s": 10.239,
+      "status": "FEASIBLE"
+    },
+    {
+      "store_id": "CA_2",
+      "variant": "circuit, 1 min grid",
+      "tasks": 154,
+      "high_total": 120,
+      "high_done": 62,
+      "done": 67,
+      "travel_min": 67,
+      "violations": 0,
+      "solve_s": 10.108,
+      "status": "FEASIBLE"
+    },
+    {
+      "store_id": "CA_2",
+      "variant": "circuit, 15 min grid",
+      "tasks": 154,
+      "high_total": 120,
+      "high_done": 50,
+      "done": 53,
+      "travel_min": 56,
+      "violations": 0,
+      "solve_s": 10.151,
+      "status": "FEASIBLE"
+    },
+    {
+      "store_id": "CA_2",
+      "variant": "circuit, 1 min, greedy warm start",
+      "tasks": 154,
+      "high_total": 120,
+      "high_done": 68,
+      "done": 70,
+      "travel_min": 71,
+      "violations": 0,
+      "solve_s": 10.146,
+      "status": "FEASIBLE"
+    }
+  ],
+  "sql_consistency": {
+    "forecast_max_abs_diff": 0.0,
+    "price_change_days": [
+      1919,
+      1926,
+      1933,
+      1940
+    ],
+    "price_items_match": true
+  },
+  "checks": {
+    "no_schedule_violations": true,
+    "sql_forecast_equals_numpy": true,
+    "sql_price_changes_equal_sim": true,
+    "paired_task_lists_identical": true,
+    "cpsat_never_below_fcfs_high_on_paired_days": true,
+    "ablation_no_violations": true
+  },
+  "checks_passed": "6/6"
+}

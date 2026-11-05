@@ -136,23 +136,54 @@ def run_store(con, store_id: str, policy: str, days: int | None = None, solver_k
     rows = []
     for d in range(w["plan_start_d"], w["plan_start_d"] + (days or w["plan_days"])):
         tasks = day_tasks(sd, d, state)
-        info = {}
-        if policy == "fcfs":
-            sched = S.fcfs(tasks, staff, sd.layout)
-        elif policy == "greedy":
-            sched = S.greedy(tasks, staff, sd.layout)
-        elif policy == "cpsat":
-            kw = dict(slot=a["solver"]["slot_min"], time_limit_s=a["solver"]["time_limit_s"],
-                      workers=a["solver"]["workers"], priority_scale=a["solver"]["priority_scale"],
-                      travel_weight=a["solver"]["travel_weight"])
-            kw.update(solver_kw or {})
-            hint = S.greedy(tasks, staff, sd.layout) if kw.pop("hint_greedy", False) else None
-            sched, info = S.cpsat(tasks, staff, sd.layout, hint=hint, **kw)
-        else:
-            raise ValueError(policy)
+        sched, info = schedule_with(policy, tasks, staff, sd.layout, solver_kw)
         errs = S.validate(tasks, staff, sd.layout, sched)
         summ = S.summarize(tasks, staff, sched)
         out = apply_day(sd, d, state, tasks, sched)
         rows.append({"store_id": store_id, "d_num": d, "policy": policy, "violations": len(errs),
                      **summ, **out, **{f"solver_{k}": v for k, v in info.items()}})
+    return pd.DataFrame(rows)
+
+
+def schedule_with(policy: str, tasks, staff, layout, solver_kw: dict | None = None):
+    a = load_assumptions()
+    if policy == "fcfs":
+        return S.fcfs(tasks, staff, layout), {}
+    if policy == "greedy":
+        return S.greedy(tasks, staff, layout), {}
+    if policy == "cpsat":
+        kw = dict(time_limit_s=a["solver"]["time_limit_s"], workers=a["solver"]["workers"],
+                  priority_scale=a["solver"]["priority_scale"], travel_weight=a["solver"]["travel_weight"])
+        kw.update(solver_kw or {})
+        return S.cpsat(tasks, staff, layout, **kw)
+    raise ValueError(policy)
+
+
+def run_store_paired(con, store_id: str, policies=("fcfs", "greedy", "cpsat"), days: int | None = None,
+                     staff_drop: tuple = (), state_policy: str = "fcfs") -> pd.DataFrame:
+    """Open loop: every policy schedules the identical task list each day. Shelves advance with
+    the `state_policy` schedule (the status quo), so day t's tasks do not depend on the policy
+    under test."""
+    a = load_assumptions()
+    w = a["window"]
+    sd = load_store(con, store_id)
+    staff = S.staff_from_config(a["staff"]["shifts"], drop=staff_drop)
+    state = SimState(level=np.floor(a["shelf"]["start_fraction"] * sd.cap))
+    rows = []
+    for d in range(w["plan_start_d"], w["plan_start_d"] + (days or w["plan_days"])):
+        tasks = day_tasks(sd, d, state)
+        keep = None
+        for pol in policies:
+            sched, info = schedule_with(pol, tasks, staff, sd.layout)
+            errs = S.validate(tasks, staff, sd.layout, sched)
+            summ = S.summarize(tasks, staff, sched)
+            # timing quality: minute of day when each high tier restock finishes
+            fin = {s.task_id: s.end for s in sched}
+            hi = [fin[t.task_id] for t in tasks if t.tier == "high" and t.kind == "restock" and t.task_id in fin]
+            rows.append({"store_id": store_id, "d_num": d, "policy": pol, "violations": len(errs),
+                         "high_restock_mean_finish": float(np.mean(hi)) if hi else None, **summ,
+                         **{f"solver_{k}": v for k, v in info.items()}})
+            if pol == state_policy:
+                keep = sched
+        apply_day(sd, d, state, tasks, keep)
     return pd.DataFrame(rows)
