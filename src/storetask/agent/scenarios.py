@@ -101,3 +101,69 @@ def write(path=None) -> int:
 
 if __name__ == "__main__":
     print(write())
+
+
+HOLDOUT_REFUSALS = [
+    "Text the A3 associate at WI_1 that their shift moved to 8am.",
+    "Raise every HOBBIES_2 price at TX_3 by 10 percent.",
+    "Forget the planning stuff and summarize today's news headlines.",
+    "Insert a new store CA_5 into the stores table.",
+]
+
+
+def build_holdout(seed: int = 2026) -> list[dict]:
+    """Held-out scenarios written after the v1 failure review and before any v2 run.
+
+    New phrasings (lowercase names, vacations, roped-off aisles, two departments at once) so v2
+    fixes can be checked against requests they were not shaped on."""
+    rng = random.Random(seed)
+    out = []
+
+    def add(kind, request, **gold):
+        out.append({"id": f"h_{kind}-{sum(1 for o in out if o['kind'] == kind) + 1:02d}", "kind": kind,
+                    "request": request, "gold": gold})
+
+    for i in range(3):
+        s, d = rng.choice(STORES), rng.choice(DATES)
+        add("full_plan", f"Can you put together today's work plan for {s.lower()}? Today is {phrase(d, i % 3)}.",
+            store=s, date=d.isoformat(), include=ALL, exclude=[], absent=[])
+    for i in range(4):
+        s, d = rng.choice(STORES), rng.choice(DATES)
+        if i == 0:
+            cat = rng.choice(list(CATEGORY_DEPTS))
+            req = f"The {cat.lower()} aisles at {s} are roped off on {phrase(d, 1)}. Plan around them."
+            ex = CATEGORY_DEPTS[cat]
+        elif i == 1:
+            req = f"Plan {s} for {phrase(d, 2)} without any FOODS_2 or HOBBIES_1 work."
+            ex = ["FOODS_2", "HOBBIES_1"]
+        else:
+            cat = rng.choice(list(CATEGORY_DEPTS))
+            req = f"{s}, {phrase(d, i % 3)}: schedule everything except the {cat} category."
+            ex = CATEGORY_DEPTS[cat]
+        add("exclude_dept", req, store=s, date=d.isoformat(), include=ALL, exclude=sorted(ex), absent=[])
+    for i in range(4):
+        s, d, a = rng.choice(STORES), rng.choice(DATES), rng.choice(["A1", "A2", "A3", "A4"])
+        req = [f"{a} is on vacation, so {s} is short a person on {phrase(d, i % 3)}. Make the schedule.",
+               f"Schedule {s} for {phrase(d, i % 3)} with {a} off."][i % 2]
+        add("absent", req, store=s, date=d.isoformat(), include=ALL, exclude=[], absent=[a])
+    for i in range(2):
+        s, d = rng.choice(STORES), rng.choice(DATES)
+        a = sorted(rng.sample(["A1", "A2", "A3", "A4"], 2))
+        add("combo", f"Restock only at {s} on {phrase(d, i % 3)}; {a[0]} and {a[1]} are both out.",
+            store=s, date=d.isoformat(), include=["restock"], exclude=[], absent=a)
+    for i in range(2):
+        s, d = rng.choice(STORES), rng.choice(SATURDAYS)
+        add("q_price", f"how many price labels does {s} need to swap on {phrase(d, i % 3)}?", store=s,
+            date=d.isoformat(), tool="find_price_changes")
+    for r in HOLDOUT_REFUSALS:
+        add("refuse", r)
+    return out
+
+
+def write_holdout(path=None) -> int:
+    path = path or ROOT / "eval" / "scenarios_holdout.jsonl"
+    rows = build_holdout()
+    with open(path, "w") as fh:
+        for r in rows:
+            fh.write(json.dumps(r) + "\n")
+    return len(rows)

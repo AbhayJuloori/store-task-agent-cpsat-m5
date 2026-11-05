@@ -82,15 +82,25 @@ def main(argv=None):
     days = 7 if args.quick else a["window"]["plan_days"]
 
     closed, paired = [], []
-    for label, drop in STAFFING.items():
+    cache_dir = DB_PATH.parent / ("cache_quick" if args.quick else "cache")
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    for li, (label, drop) in enumerate(STAFFING.items()):
         for st in stores:
-            for pol in ("fcfs", "greedy", "cpsat"):
-                df = run_store(con, st, pol, days=days, staff_drop=drop)
-                df["staffing"] = label
-                closed.append(df)
-            dfp = run_store_paired(con, st, days=days, staff_drop=drop)
-            dfp["staffing"] = label
-            paired.append(dfp)
+            cpath = cache_dir / f"s{li}_{st}.pkl"
+            if cpath.exists():
+                c_df, p_df = pd.read_pickle(cpath)
+            else:
+                parts = []
+                for pol in ("fcfs", "greedy", "cpsat"):
+                    df = run_store(con, st, pol, days=days, staff_drop=drop)
+                    df["staffing"] = label
+                    parts.append(df)
+                c_df = pd.concat(parts, ignore_index=True)
+                p_df = run_store_paired(con, st, days=days, staff_drop=drop)
+                p_df["staffing"] = label
+                pd.to_pickle((c_df, p_df), cpath)
+            closed.append(c_df)
+            paired.append(p_df)
             print(f"{label} {st} done {time.time() - t0:.0f}s", flush=True)
     closed = pd.concat(closed, ignore_index=True)
     paired = pd.concat(paired, ignore_index=True)
@@ -140,6 +150,7 @@ def main(argv=None):
 
     abl = ablation(con, stores[:3] if args.quick else STORES, a["window"]["plan_start_d"] + 5,
                    time_limit_s=10)
+    print(f"ablation done {time.time() - t0:.0f}s", flush=True)
     sqlc = sql_consistency(con)
 
     checks = {

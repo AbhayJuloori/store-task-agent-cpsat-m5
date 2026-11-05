@@ -120,8 +120,9 @@ def main(argv=None):
     ap.add_argument("--base-url", default=None)
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--scenarios", default="scenarios.jsonl", help="file under eval/")
     args = ap.parse_args(argv)
-    scen = [json.loads(line) for line in open(ROOT / "eval" / "scenarios.jsonl")]
+    scen = [json.loads(line) for line in open(ROOT / "eval" / args.scenarios)]
     if args.limit:
         scen = scen[::max(1, len(scen) // args.limit)][:args.limit]
     st = Store()
