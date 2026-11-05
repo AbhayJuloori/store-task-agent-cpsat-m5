@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Store Task Scheduler</title>
+<meta name="description" content="Daily store tasks from Walmart M5 demand and price changes, scheduled across associate shifts with OR-Tools CP-SAT, planned by a LangGraph agent.">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f7f7f5; --card: #fcfcfb; --ink: #0b0b0b; --muted: #52514e; --line: #e3e2dc; --grid: #ecebe6;
+    --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --neutral: #8a8984;
+    --ok: #1d7a3e; --bad: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #121211; --card: #1a1a19; --ink: #f0efec; --muted: #c3c2b7; --line: #33322f; --grid: #2a2a28;
+      --s1: #3987e5; --s2: #d95926; --s3: #199e70; --neutral: #8f8e88;
+      --ok: #6cc28f; --bad: #ef8a83;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #121211; --card: #1a1a19; --ink: #f0efec; --muted: #c3c2b7; --line: #33322f; --grid: #2a2a28;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --neutral: #8f8e88;
+    --ok: #6cc28f; --bad: #ef8a83;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif; }
+  main { max-width: 1080px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 { font-size: 18px; margin: 0 0 4px; }
+  p.lede { color: var(--muted); margin: 0 0 24px; max-width: 780px; }
+  a { color: var(--s1); }
+  .grid { display: grid; gap: 16px; }
+  .kpis { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom: 16px; }
+  .two { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+  .kpi .v { font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .kpi .l { color: var(--muted); font-size: 13px; }
+  section { margin-top: 16px; }
+  .sub { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  td.n, th.n { text-align: right; }
+  .scroll { overflow-x: auto; }
+  .pass { color: var(--ok); font-weight: 600; }
+  .fail { color: var(--bad); font-weight: 600; }
+  .note { color: var(--muted); font-size: 13px; }
+  .chart { position: relative; height: 300px; }
+  .flow { display: flex; flex-wrap: wrap; gap: 8px; }
+  .step { flex: 1 1 150px; border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+  .step b { display: block; font-size: 14px; }
+  .step span { color: var(--muted); font-size: 12.5px; }
+  footer { margin-top: 32px; color: var(--muted); font-size: 13px; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin: 0 0 8px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Store Task Planning &amp; Shift Scheduling</h1>
+  <p class="lede">Daily restock, price label and planogram reset tasks for the 10 Walmart stores in the public M5 dataset,
+    built with SQL on DuckDB from real item demand and real week over week shelf price changes, then scheduled across
+    associate shifts with an OR-Tools CP-SAT model and compared with first come first served. A LangGraph agent turns a
+    manager's request into the same tool calls. Window: 2016-04-25 to 2016-05-22, 280 store days. Store layout, shelf
+    capacity, task durations and shifts are synthetic (seeded).
+    <a href="https://github.com/AbhayJuloori/store-task-agent-cpsat-m5">Source on GitHub</a>.</p>
+
+  <div class="grid kpis" id="kpis"></div>
+
+  <section class="card">
+    <h2>Pipeline</h2>
+    <div class="flow">
+      <div class="step"><b>M5 CSVs</b><span>13.5M sales rows, 78,815 price changes</span></div>
+      <div class="step"><b>DuckDB SQL</b><span>28 day forecast, shelf rules, price deltas</span></div>
+      <div class="step"><b>Tasks</b><span>~130 per store day, 3 tiers, skills, noon deadline</span></div>
+      <div class="step"><b>CP-SAT</b><span>assign + route, 3 s limit, validator</span></div>
+      <div class="step"><b>Shelf simulation</b><span>real units sold, lost units</span></div>
+      <div class="step"><b>LangGraph agent</b><span>7 read-only tools, scored on 60 + 19 requests</span></div>
+    </div>
+  </section>
+
+  <section class="grid two">
+    <div class="card">
+      <h2>High priority tasks done</h2>
+      <p class="sub">Same task list for every policy each store day (paired). 280 store days per staffing level.</p>
+      <div class="legend" id="leg1"></div>
+      <div class="chart"><canvas id="cov"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Demand lost to empty shelves</h2>
+      <p class="sub">Each policy runs its own 28 day simulation (closed loop) on real M5 unit sales.</p>
+      <div class="legend" id="leg2"></div>
+      <div class="chart"><canvas id="lost"></canvas></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Short staffed (3 associates): high priority coverage by day</h2>
+    <p class="sub">Share of high priority tasks completed across the 10 stores, each day of the window.</p>
+    <div class="legend" id="leg3"></div>
+    <div class="chart"><canvas id="daily"></canvas></div>
+  </section>
+
+  <section class="grid two">
+    <div class="card">
+      <h2>Policy summary</h2>
+      <div class="scroll"><table id="pol"></table></div>
+      <p class="note">CP-SAT finishes the most high priority work, but the priority greedy rule loses the fewest units:
+        the CP-SAT objective counts tasks, not units at risk, and favours short tasks. CP-SAT also walks slightly
+        more per task. Both are reported, not tuned away.</p>
+    </div>
+    <div class="card">
+      <h2>Model ablation</h2>
+      <p class="sub">One overloaded day per store, 3 associates, 10 s each.</p>
+      <div class="scroll"><table id="abl"></table></div>
+      <p class="note">The exact routing model (a circuit per associate) is too large at ~130 tasks; a 15 minute start
+        grid makes it smaller but wastes time on 8 to 20 minute tasks.</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Planning agent</h2>
+    <p class="sub">Success = right tools, exact arguments, task set equal to the gold run, numbers in answers, no tool calls on refusals.
+      v2 fixes came from the v1 failure review; the 19 request holdout was written before any v2 run.</p>
+    <div class="scroll"><table id="agent"></table></div>
+  </section>
+
+  <section class="card">
+    <h2>Run checks</h2>
+    <div class="scroll"><table id="checks"></table></div>
+  </section>
+
+  <footer>Data: M5 Forecasting Accuracy (Walmart via Kaggle). Synthetic: layout, capacities, durations, shifts, skills,
+    reset calendar. Agent models: qwen3:8b and qwen3:14b on Ollama (Kaggle T4).</footer>
+</main>
+<script>
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const POL = [["fcfs", "FCFS", "--neutral"], ["greedy", "Priority greedy", "--s2"], ["cpsat", "CP-SAT", "--s1"]];
+const pct = (x, d = 1) => (100 * x).toFixed(d) + "%";
+const esc = s => String(s).replace(/[&<>]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;"}[c]));
+function legend(id) {
+  document.getElementById(id).innerHTML = POL.map(p => `<span><i style="background:${css(p[2])}"></i>${p[1]}</span>`).join("");
+}
+function baseOpts(yfmt) {
+  return { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false },
+    tooltip: { callbacks: { label: c => `${c.dataset.label}: ${yfmt(c.parsed.y)}` } } },
+    scales: { x: { grid: { display: false }, ticks: { color: css("--muted") } },
+              y: { grid: { color: css("--grid") }, ticks: { color: css("--muted"), callback: v => yfmt(v) } } } };
+}
+fetch("data/site.json").then(r => r.json()).then(S => {
+  const P = S.paired, C = S.closed_loop, staff = ["4 associates", "3 associates (A4 out)"];
+  const get = (rows, st, pol) => rows.find(r => r.staffing === st && r.policy === pol);
+  const d3 = S.paired_differences["3 associates (A4 out)"];
+  const short = st => st.startsWith("3") ? "3 associates" : "4 associates";
+  const agentKeys = Object.keys(S.agent);
+  const best = agentKeys.filter(k => k.startsWith("v2/") && !k.includes("holdout"));
+  const k = [
+    [pct(get(P, staff[1], "cpsat").high_coverage), "high priority done, CP-SAT, 3 associates"],
+    [pct(get(P, staff[1], "fcfs").high_coverage), "same days, first come first served"],
+    ["+" + (100 * d3.cpsat_minus_fcfs_high_coverage.mean).toFixed(1) + " pts", `CP-SAT vs FCFS, 95% CI ${(100*d3.cpsat_minus_fcfs_high_coverage.ci95[0]).toFixed(1)} to ${(100*d3.cpsat_minus_fcfs_high_coverage.ci95[1]).toFixed(1)}`],
+    [pct(get(C, staff[1], "greedy").lost_share) + " / " + pct(get(C, staff[1], "cpsat").lost_share) + " / " + pct(get(C, staff[1], "fcfs").lost_share), "units lost, greedy / CP-SAT / FCFS (3 assoc.)"],
+    [S.solver.median_s.toFixed(1) + " s", `median solve, ${S.solver.tasks_median} tasks per store day`],
+  ];
+  if (best.length) {
+    const b = best.map(x => S.agent[x]).sort((a, z) => z.success - a.success)[0];
+    k.push([pct(b.success, 0), `agent success, ${b.model} (60 requests, v2)`]);
+  }
+  document.getElementById("kpis").innerHTML = k.map(x => `<div class="card kpi"><div class="v">${x[0]}</div><div class="l">${x[1]}</div></div>`).join("");
+
+  ["leg1", "leg2", "leg3"].forEach(legend);
+  const bars = (id, rows, field, fmt, min) => new Chart(document.getElementById(id), { type: "bar",
+    data: { labels: staff.map(short), datasets: POL.map(p => ({ label: p[1], backgroundColor: css(p[2]), borderRadius: 3,
+      data: staff.map(st => get(rows, st, p[0])[field]) })) },
+    options: (() => { const o = baseOpts(fmt); if (min !== undefined) o.scales.y.min = min; return o; })() });
+  bars("cov", P, "high_coverage", v => pct(v, 0), 0.6);
+  bars("lost", C, "lost_share", v => pct(v, 0), 0);
+
+  const dd = S.daily_high_coverage[staff[1]];
+  new Chart(document.getElementById("daily"), { type: "line",
+    data: { labels: dd.d_num.map((d, i) => "Day " + (i + 1)), datasets: POL.map(p => ({ label: p[1], data: dd[p[0]],
+      borderColor: css(p[2]), backgroundColor: css(p[2]), pointRadius: 0, borderWidth: 2, tension: 0 })) },
+    options: (() => { const o = baseOpts(v => pct(v, 0)); o.interaction = { mode: "index", intersect: false }; return o; })() });
+
+  let h = `<tr><th>Staffing</th><th>Policy</th><th class="n">High done</th><th class="n">Walk min / task</th><th class="n">Units lost</th><th class="n">Reset backlog at end</th></tr>`;
+  staff.forEach(st => POL.forEach(p => { const a = get(P, st, p[0]), c = get(C, st, p[0]);
+    h += `<tr><td>${short(st)}</td><td>${p[1]}</td><td class="n">${pct(a.high_coverage)}</td><td class="n">${a.travel_per_task.toFixed(2)}</td><td class="n">${pct(c.lost_share)}</td><td class="n">${c.backlog_reset_end}</td></tr>`; }));
+  document.getElementById("pol").innerHTML = h;
+
+  const vars = [...new Set(S.ablation.map(r => r.variant))];
+  let a = `<tr><th>Variant</th><th class="n">High done</th><th class="n">All done</th><th class="n">Walk min</th></tr>`;
+  const tot = S.ablation.filter(r => r.variant === vars[0]).reduce((s, r) => s + r.high_total, 0);
+  vars.forEach(v => { const rr = S.ablation.filter(r => r.variant === v); const s = f => rr.reduce((x, r) => x + r[f], 0);
+    a += `<tr><td>${esc(v)}</td><td class="n">${s("high_done")} / ${tot}</td><td class="n">${s("done")}</td><td class="n">${s("travel_min")}</td></tr>`; });
+  document.getElementById("abl").innerHTML = a;
+
+  let g = `<tr><th>Run</th><th class="n">n</th><th class="n">Success</th><th class="n">Tools</th><th class="n">Plan args</th><th class="n">Answers</th><th class="n">Refusals</th><th class="n">Median s</th></tr>`;
+  const f = x => x === null || x === undefined ? "–" : pct(x, 0);
+  agentKeys.forEach(key => { const r = S.agent[key];
+    g += `<tr><td>${esc(key)}</td><td class="n">${r.n}</td><td class="n">${f(r.success)}</td><td class="n">${f(r.tool_selection)}</td><td class="n">${f(r.planning_args)}</td><td class="n">${f(r.question_answer)}</td><td class="n">${f(r.refusal)}</td><td class="n">${r.latency_median_s.toFixed(1)}</td></tr>`; });
+  document.getElementById("agent").innerHTML = g;
+
+  document.getElementById("checks").innerHTML = Object.entries(S.checks).map(([n, v]) =>
+    `<tr><td>${esc(n.replaceAll("_", " "))}</td><td class="${v ? "pass" : "fail"}">${v ? "pass" : "fail"}</td></tr>`).join("");
+});
+</script>
+</body>
+</html>
