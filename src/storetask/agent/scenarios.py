@@ -89,10 +89,19 @@ def build(seed: int = 7) -> list[dict]:
     return out
 
 
-def write(path=None) -> int:
-    path = path or ROOT / "eval" / "scenarios.jsonl"
+def build_holdout() -> list[dict]:
+    """30 scenarios from a different seed, frozen after the first scored run and before any agent
+    change, so v1 and v2 can be compared on requests neither was adjusted to."""
+    rows = build(seed=11)[::2]
+    for r in rows:
+        r["id"] = "h-" + r["id"]
+    return rows
+
+
+def write(path=None, holdout: bool = False) -> int:
+    path = path or ROOT / "eval" / ("holdout.jsonl" if holdout else "scenarios.jsonl")
     path.parent.mkdir(parents=True, exist_ok=True)
-    rows = build()
+    rows = build_holdout() if holdout else build()
     with open(path, "w") as fh:
         for r in rows:
             fh.write(json.dumps(r) + "\n")
@@ -100,7 +109,7 @@ def write(path=None) -> int:
 
 
 if __name__ == "__main__":
-    print(write())
+    print(write(), write(holdout=True))
 
 
 HOLDOUT_REFUSALS = [
