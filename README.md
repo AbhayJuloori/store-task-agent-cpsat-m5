@@ -7,7 +7,31 @@ OR-Tools CP-SAT model, and wraps both behind a LangGraph agent that plans a day 
 
 **Live summary:** https://abhayjuloori.github.io/store-task-agent-cpsat-m5/
 
-<!-- RESULTS -->
+## Results at a glance
+All numbers from `docs/data/run_report.json` (full run, 2,517 s, 6/6 checks) and `eval/results/`.
+
+| | 4 associates | 3 associates (A4 out) |
+|---|---|---|
+| Task minutes / shift minutes | 0.81 | 1.31 |
+| High priority tasks done: FCFS / greedy / **CP-SAT** (paired, 280 store days) | 99.1% / 99.97% / **99.97%** | 77.3% / 87.2% / **92.4%** |
+| CP-SAT minus FCFS, high priority coverage (bootstrap 95% CI) | +0.7 pts [0.4, 1.0] | **+14.7 pts [13.9, 15.3]** |
+| CP-SAT minus greedy | +0.0 pts [-0.0, 0.0] | +4.6 pts [4.0, 5.3] |
+| Demand lost to empty shelves, 28 day closed loop: FCFS / greedy / CP-SAT | 4.93% / **4.52%** / 4.92% | 14.89% / **7.25%** / 9.83% |
+| Walking minutes per completed task: FCFS / greedy / CP-SAT | 1.04 / 1.03 / 1.11 | 1.04 / 1.01 / 1.06 |
+
+- **CP-SAT finishes the most high priority work when a store is short staffed**, 14.7 points more than
+  first come first served on identical task lists, and beats the priority greedy rule on 144 of 280
+  short staffed store days (loses on 20).
+- **But the greedy rule loses the fewest units on real M5 sales.** The CP-SAT objective counts high
+  priority *tasks*, not *units at risk*, so it packs many short tasks and leaves some long, high volume
+  restocks; it also starves resets (reset backlog 489 bays at day 28 vs 173 for greedy). This is the
+  clearest next step: weight restocks by expected units saved and add a time of day term.
+- **No walking win.** CP-SAT walks slightly more per task than FCFS. Walking is about one minute per
+  task in this layout, so priority dominates the objective.
+- **Solver:** median 3.06 s per store day (3 s limit), 46% proven optimal, 131 tasks median (162 max).
+- **Agent (Kaggle T4, Ollama):** on the 19 request holdout, v1 17/19 for both models, **v2 19/19** for
+  both. On the 60 request main set, qwen3:14b went from 90.0% to 96.7% and qwen3:8b from 76.7% to 90.0%.
+
 
 ## Problem
 A store manager starts the day with three kinds of work: shelves the forecast says will run low,
@@ -65,9 +89,9 @@ deadlines, walking time between consecutive tasks, no double booking).
 **Why not one big routing model?** The first version was an exact vehicle routing model (a CP-SAT
 circuit per associate, minute level start times, walking on every arc). At about 130 tasks and 4
 associates it has about 70,000 arc literals; in 10 s it barely improved on the greedy warm start, and
-putting start times on a 15 minute grid (the usual trick to make it smaller) lost about 60% of the
-completed priority weight because most tasks take 8 to 20 minutes. The ablation table below measures
-this on one day per store.
+putting start times on a 15 minute grid (the usual trick to make it smaller) made it worse still,
+because most tasks take 8 to 20 minutes and every short task leaves idle time before the next slot.
+The ablation table below measures this on one day per store.
 
 ### 3. Evaluation design (`sim.py`, `run.py`)
 - **Paired (open loop):** for every store and day, all three policies schedule the *identical* task
@@ -96,7 +120,64 @@ email someone, off-topic). Dates appear as ISO, "May 7, 2016" and "Saturday, May
 Scoring: tool selection, exact arguments after normalising defaults, final task set equal to the
 gold run, every gold number present in question answers, and zero tool calls on refusals.
 
-<!-- RESULTS_DETAIL -->
+## Detailed results
+
+### Model ablation (one overloaded day per store, 3 associates, 10 s per solve)
+| Variant | High priority done (of 943) | All tasks done | Walking min |
+|---|---|---|---|
+| Priority greedy | 603 | 618 | 628 |
+| **CP-SAT assignment + route (main)** | **646** | 671 | 755 |
+| CP-SAT circuit, minute start times | 510 | 627 | 643 |
+| CP-SAT circuit, minute starts, greedy warm start | 605 | 622 | 624 |
+| CP-SAT circuit, 15 minute start grid | 442 | 515 | 539 |
+
+The time limit was set to 3 s after one overloaded day (CA_3, 2016-04-30, 3 associates) gave 62, 62,
+62, 61 and 61 high priority tasks at 1, 3, 5, 10 and 30 s.
+
+### Planning agent
+| Run | Requests | Success | Tool selection | Planning args | Question answers | Refusals | Median latency |
+|---|---|---|---|---|---|---|---|
+| v1 qwen3:8b, main | 60 | 76.7% | 83.3% | 65.0% | 100% | 100% | 5.3 s |
+| v1 qwen3:14b, main | 60 | 90.0% | 98.3% | 87.5% | 100% | 85.7% | 16.5 s |
+| v1 qwen3:8b, holdout | 19 | 89.5% | 100% | 92.3% | 100% | 100% | 7.5 s |
+| v1 qwen3:14b, holdout | 19 | 89.5% | 100% | 84.6% | 100% | 100% | 19.3 s |
+| **v2 qwen3:8b, holdout** | 19 | **100%** | 100% | 100% | 100% | 100% | 6.6 s |
+| **v2 qwen3:14b, holdout** | 19 | **100%** | 100% | 100% | 100% | 100% | 17.2 s |
+| v2 qwen3:8b, main (optimistic) | 60 | 90.0% | 100% | 85.0% | 100% | 100% | 6.8 s |
+| v2 qwen3:14b, main (optimistic) | 60 | 96.7% | 98.3% | 97.5% | 100% | 85.7% | 15.3 s |
+
+What changed from v1 to v2, all from the v1 failure review:
+- **qwen3:8b returned an empty reply on all 8 call-out requests.** Not the model: with
+  `langchain-ollama` 1.1.0 the tool call was dropped, while Ollama's streaming API and its OpenAI
+  compatible `/v1` endpoint both returned a correct `schedule_tasks` call. v2 talks to Ollama through
+  `/v1` and retries an empty turn once.
+- **"Skip the FOODS department" excluded nothing.** The model passed the category name and the v1 tool
+  treated unknown ids as a no-op. v2 resolves category names to department ids and returns an error
+  for anything unknown; associate ids are validated the same way.
+- **qwen3:14b planned a day when asked to email a schedule.** The prompt now says the tools are read
+  only and cannot send messages. (It still did on the main set: refusals 6/7.)
+
+The holdout (`eval/scenarios_holdout.jsonl`, new phrasings: lowercase store ids, vacations, roped off
+aisles, two departments at once, four new refusals) was written after the v1 review and before any
+v2 run, so v1 vs v2 on it is the fair comparison. The v2 main-set numbers are optimistic because the
+fixes were shaped on main-set failures. v2 also introduced a new failure: on 5 main-set requests
+qwen3:8b passed all four associates as absent, so nothing was scheduled.
+
+## Limitations
+- Store layout, shelf capacity, task durations, shifts, skills and the reset calendar are synthetic.
+  Demand, prices and dates are real M5 data.
+- The CP-SAT objective (priority count) and the outcome (lost units) disagree; see Results.
+- The restock forecast is a 28 day moving average, chosen for transparency, not accuracy.
+- Shelf simulation: demand spread evenly over store hours, back room stock unlimited, restock fills
+  to capacity, no shrink or phantom inventory.
+- The assignment model approximates walking with aisle visits; exact walking is applied afterwards by
+  the route, repair and fill steps.
+- Agent requests are generated from templates plus a 19 request holdout, not real manager messages.
+  Gold answers are exact because the tools are deterministic, but the request distribution is narrow.
+- `make_llm` supports the Anthropic API, but every reported run used qwen3 through Ollama.
+- M5 files come from a public Kaggle mirror (sizes match the competition files; checksums in
+  `data/README.md`).
+
 
 ## How to run
 ```bash

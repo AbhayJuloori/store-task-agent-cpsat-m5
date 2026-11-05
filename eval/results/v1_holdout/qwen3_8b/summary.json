@@ -1,0 +1,46 @@
+{
+  "n": 19,
+  "success": 0.8947,
+  "tool_selection": 1.0,
+  "planning_args": 0.9231,
+  "planning_plan_match": 0.8462,
+  "planning_task_jaccard": 0.9274,
+  "question_answer": 1.0,
+  "refusal": 1.0,
+  "schedule_violations": 0,
+  "latency_median_s": 7.47,
+  "latency_p90_s": 11.74,
+  "tokens_in_mean": 3199.7368,
+  "tokens_out_mean": 140.8421,
+  "by_kind": {
+    "absent": {
+      "n": 4,
+      "success": 1.0
+    },
+    "combo": {
+      "n": 2,
+      "success": 1.0
+    },
+    "exclude_dept": {
+      "n": 4,
+      "success": 0.5
+    },
+    "full_plan": {
+      "n": 3,
+      "success": 1.0
+    },
+    "q_price": {
+      "n": 2,
+      "success": 1.0
+    },
+    "refuse": {
+      "n": 4,
+      "success": 1.0
+    }
+  },
+  "model": "qwen3:8b",
+  "provider": "ollama",
+  "agent": "v1",
+  "scenarios": "scenarios_holdout.jsonl",
+  "wall_s": 147.8
+}

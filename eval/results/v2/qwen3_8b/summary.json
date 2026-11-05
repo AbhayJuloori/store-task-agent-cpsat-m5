@@ -1,0 +1,58 @@
+{
+  "n": 60,
+  "success": 0.9,
+  "tool_selection": 1.0,
+  "planning_args": 0.85,
+  "planning_plan_match": 0.85,
+  "planning_task_jaccard": 1.0,
+  "question_answer": 1.0,
+  "refusal": 1.0,
+  "schedule_violations": 0,
+  "latency_median_s": 6.82,
+  "latency_p90_s": 13.93,
+  "tokens_in_mean": 3351.7167,
+  "tokens_out_mean": 161.8167,
+  "by_kind": {
+    "absent": {
+      "n": 8,
+      "success": 1.0
+    },
+    "combo": {
+      "n": 6,
+      "success": 1.0
+    },
+    "exclude_dept": {
+      "n": 8,
+      "success": 0.625
+    },
+    "full_plan": {
+      "n": 12,
+      "success": 0.9167
+    },
+    "price_only": {
+      "n": 6,
+      "success": 0.6667
+    },
+    "q_price": {
+      "n": 5,
+      "success": 1.0
+    },
+    "q_reset": {
+      "n": 3,
+      "success": 1.0
+    },
+    "q_restock": {
+      "n": 5,
+      "success": 1.0
+    },
+    "refuse": {
+      "n": 7,
+      "success": 1.0
+    }
+  },
+  "model": "qwen3:8b",
+  "provider": "ollama",
+  "agent": "v2",
+  "scenarios": "scenarios.jsonl",
+  "wall_s": 592.7
+}

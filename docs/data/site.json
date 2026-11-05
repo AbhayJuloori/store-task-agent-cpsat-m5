@@ -1531,6 +1531,306 @@
    "model": "qwen3:8b",
    "provider": "ollama",
    "wall_s": 513.1
+  },
+  "v1_holdout/qwen3_14b": {
+   "n": 19,
+   "success": 0.8947,
+   "tool_selection": 1.0,
+   "planning_args": 0.8462,
+   "planning_plan_match": 0.8462,
+   "planning_task_jaccard": 0.9776,
+   "question_answer": 1.0,
+   "refusal": 1.0,
+   "schedule_violations": 0,
+   "latency_median_s": 19.27,
+   "latency_p90_s": 32.56,
+   "tokens_in_mean": 3227.2105,
+   "tokens_out_mean": 206.3158,
+   "by_kind": {
+    "absent": {
+     "n": 4,
+     "success": 1.0
+    },
+    "combo": {
+     "n": 2,
+     "success": 1.0
+    },
+    "exclude_dept": {
+     "n": 4,
+     "success": 0.75
+    },
+    "full_plan": {
+     "n": 3,
+     "success": 0.6667
+    },
+    "q_price": {
+     "n": 2,
+     "success": 1.0
+    },
+    "refuse": {
+     "n": 4,
+     "success": 1.0
+    }
+   },
+   "model": "qwen3:14b",
+   "provider": "ollama",
+   "agent": "v1",
+   "scenarios": "scenarios_holdout.jsonl",
+   "wall_s": 373.2
+  },
+  "v1_holdout/qwen3_8b": {
+   "n": 19,
+   "success": 0.8947,
+   "tool_selection": 1.0,
+   "planning_args": 0.9231,
+   "planning_plan_match": 0.8462,
+   "planning_task_jaccard": 0.9274,
+   "question_answer": 1.0,
+   "refusal": 1.0,
+   "schedule_violations": 0,
+   "latency_median_s": 7.47,
+   "latency_p90_s": 11.74,
+   "tokens_in_mean": 3199.7368,
+   "tokens_out_mean": 140.8421,
+   "by_kind": {
+    "absent": {
+     "n": 4,
+     "success": 1.0
+    },
+    "combo": {
+     "n": 2,
+     "success": 1.0
+    },
+    "exclude_dept": {
+     "n": 4,
+     "success": 0.5
+    },
+    "full_plan": {
+     "n": 3,
+     "success": 1.0
+    },
+    "q_price": {
+     "n": 2,
+     "success": 1.0
+    },
+    "refuse": {
+     "n": 4,
+     "success": 1.0
+    }
+   },
+   "model": "qwen3:8b",
+   "provider": "ollama",
+   "agent": "v1",
+   "scenarios": "scenarios_holdout.jsonl",
+   "wall_s": 147.8
+  },
+  "v2/qwen3_14b": {
+   "n": 60,
+   "success": 0.9667,
+   "tool_selection": 0.9833,
+   "planning_args": 0.975,
+   "planning_plan_match": 0.975,
+   "planning_task_jaccard": 1.0,
+   "question_answer": 1.0,
+   "refusal": 0.8571,
+   "schedule_violations": 0,
+   "latency_median_s": 15.3,
+   "latency_p90_s": 34.09,
+   "tokens_in_mean": 2876.1333,
+   "tokens_out_mean": 192.6,
+   "by_kind": {
+    "absent": {
+     "n": 8,
+     "success": 1.0
+    },
+    "combo": {
+     "n": 6,
+     "success": 1.0
+    },
+    "exclude_dept": {
+     "n": 8,
+     "success": 1.0
+    },
+    "full_plan": {
+     "n": 12,
+     "success": 0.9167
+    },
+    "price_only": {
+     "n": 6,
+     "success": 1.0
+    },
+    "q_price": {
+     "n": 5,
+     "success": 1.0
+    },
+    "q_reset": {
+     "n": 3,
+     "success": 1.0
+    },
+    "q_restock": {
+     "n": 5,
+     "success": 1.0
+    },
+    "refuse": {
+     "n": 7,
+     "success": 0.8571
+    }
+   },
+   "model": "qwen3:14b",
+   "provider": "ollama",
+   "agent": "v2",
+   "scenarios": "scenarios.jsonl",
+   "wall_s": 1204.8
+  },
+  "v2/qwen3_8b": {
+   "n": 60,
+   "success": 0.9,
+   "tool_selection": 1.0,
+   "planning_args": 0.85,
+   "planning_plan_match": 0.85,
+   "planning_task_jaccard": 1.0,
+   "question_answer": 1.0,
+   "refusal": 1.0,
+   "schedule_violations": 0,
+   "latency_median_s": 6.82,
+   "latency_p90_s": 13.93,
+   "tokens_in_mean": 3351.7167,
+   "tokens_out_mean": 161.8167,
+   "by_kind": {
+    "absent": {
+     "n": 8,
+     "success": 1.0
+    },
+    "combo": {
+     "n": 6,
+     "success": 1.0
+    },
+    "exclude_dept": {
+     "n": 8,
+     "success": 0.625
+    },
+    "full_plan": {
+     "n": 12,
+     "success": 0.9167
+    },
+    "price_only": {
+     "n": 6,
+     "success": 0.6667
+    },
+    "q_price": {
+     "n": 5,
+     "success": 1.0
+    },
+    "q_reset": {
+     "n": 3,
+     "success": 1.0
+    },
+    "q_restock": {
+     "n": 5,
+     "success": 1.0
+    },
+    "refuse": {
+     "n": 7,
+     "success": 1.0
+    }
+   },
+   "model": "qwen3:8b",
+   "provider": "ollama",
+   "agent": "v2",
+   "scenarios": "scenarios.jsonl",
+   "wall_s": 592.7
+  },
+  "v2_holdout/qwen3_14b": {
+   "n": 19,
+   "success": 1.0,
+   "tool_selection": 1.0,
+   "planning_args": 1.0,
+   "planning_plan_match": 1.0,
+   "planning_task_jaccard": 1.0,
+   "question_answer": 1.0,
+   "refusal": 1.0,
+   "schedule_violations": 0,
+   "latency_median_s": 17.24,
+   "latency_p90_s": 31.2,
+   "tokens_in_mean": 2894.4737,
+   "tokens_out_mean": 195.7895,
+   "by_kind": {
+    "absent": {
+     "n": 4,
+     "success": 1.0
+    },
+    "combo": {
+     "n": 2,
+     "success": 1.0
+    },
+    "exclude_dept": {
+     "n": 4,
+     "success": 1.0
+    },
+    "full_plan": {
+     "n": 3,
+     "success": 1.0
+    },
+    "q_price": {
+     "n": 2,
+     "success": 1.0
+    },
+    "refuse": {
+     "n": 4,
+     "success": 1.0
+    }
+   },
+   "model": "qwen3:14b",
+   "provider": "ollama",
+   "agent": "v2",
+   "scenarios": "scenarios_holdout.jsonl",
+   "wall_s": 355.1
+  },
+  "v2_holdout/qwen3_8b": {
+   "n": 19,
+   "success": 1.0,
+   "tool_selection": 1.0,
+   "planning_args": 1.0,
+   "planning_plan_match": 1.0,
+   "planning_task_jaccard": 1.0,
+   "question_answer": 1.0,
+   "refusal": 1.0,
+   "schedule_violations": 0,
+   "latency_median_s": 6.56,
+   "latency_p90_s": 12.59,
+   "tokens_in_mean": 3314.0,
+   "tokens_out_mean": 145.7368,
+   "by_kind": {
+    "absent": {
+     "n": 4,
+     "success": 1.0
+    },
+    "combo": {
+     "n": 2,
+     "success": 1.0
+    },
+    "exclude_dept": {
+     "n": 4,
+     "success": 1.0
+    },
+    "full_plan": {
+     "n": 3,
+     "success": 1.0
+    },
+    "q_price": {
+     "n": 2,
+     "success": 1.0
+    },
+    "refuse": {
+     "n": 4,
+     "success": 1.0
+    }
+   },
+   "model": "qwen3:8b",
+   "provider": "ollama",
+   "agent": "v2",
+   "scenarios": "scenarios_holdout.jsonl",
+   "wall_s": 145.7
   }
  }
 }
