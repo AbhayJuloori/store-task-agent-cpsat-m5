@@ -50,12 +50,17 @@ for gpu, model in enumerate(MODELS):
     sh(f"OLLAMA_HOST=127.0.0.1:{11434 + gpu} ollama pull {model} > /dev/null 2>&1")
 
 run_env = dict(os.environ, PYTHONPATH=f"{WORK}/src")
+# per model, sequentially on its own GPU: v2 on the main set, v2 on the holdout, frozen v1 on the holdout
+RUNS = [("v2", "scenarios.jsonl", "v2"), ("v2", "scenarios_holdout.jsonl", "v2_holdout"),
+        ("v1", "scenarios_holdout.jsonl", "v1_holdout")]
 procs = []
 for gpu, model in enumerate(MODELS):
-    log = open(f"/kaggle/working/eval_{model.replace(':', '_')}.log", "w")
-    cmd = [sys.executable, "-m", "storetask.agent.evaluate", "--model", model,
-           "--base-url", f"http://127.0.0.1:{11434 + gpu}"]
-    procs.append(subprocess.Popen(cmd, cwd=WORK, env=run_env, stdout=log, stderr=subprocess.STDOUT))
+    tag = model.replace(":", "_")
+    script = " && ".join(
+        f"{sys.executable} -m storetask.agent.evaluate --model {model} --base-url http://127.0.0.1:{11434 + gpu} "
+        f"--agent {agent} --scenarios {scen} --out {out}/{tag}" for agent, scen, out in RUNS)
+    log = open(f"/kaggle/working/eval_{tag}.log", "w")
+    procs.append(subprocess.Popen(script, shell=True, cwd=WORK, env=run_env, stdout=log, stderr=subprocess.STDOUT))
 for p in procs:
     p.wait()
     print("exit", p.returncode, flush=True)

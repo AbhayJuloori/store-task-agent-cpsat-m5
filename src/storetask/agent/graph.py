@@ -29,13 +29,51 @@ A3 10:00-18:30 (restock, pricing, reset), A4 14:00-22:30 (restock).
 Rules:
 - Use the tools for every number. Never guess counts.
 - To plan or replan a day: call create_tasks, then schedule_tasks. Pass include only when the user
-  limits the task kinds; pass exclude_departments only when the user names departments to skip
-  (use list_departments to map a name like HOBBIES to its department ids); pass
-  absent_associates only for associates the user says are out.
+  limits the task kinds. Whenever the user names departments or categories to skip, pass every one
+  of them in exclude_departments (department ids like FOODS_3 or category names like HOBBIES both
+  work). Pass absent_associates (ids A1-A4) for associates the user says are out, sick, off or on
+  vacation.
 - To answer a question about price changes, restock needs or resets, call the matching find_* tool.
-- The tools are read-only. If asked to change prices, edit data, delete anything, or do work
-  outside store task planning, refuse briefly and call no tools.
+- The tools are read-only and cannot send anything. If asked to change prices, edit, insert or
+  delete data, send an email, text or message, or do work outside store task planning, refuse
+  briefly and call no tools.
 - Finish with a short plain answer that states the key numbers."""
+
+
+ASSOCIATES = ("A1", "A2", "A3", "A4")
+
+
+def norm_store(store_id: str) -> str:
+    return (store_id or "").strip().upper()
+
+
+def resolve_departments(names, departments: list[dict]) -> list[str]:
+    """Map department ids or category names (any case) to sorted department ids.
+
+    FOODS -> FOODS_1, FOODS_2, FOODS_3. Unknown names raise ValueError so the model sees an error
+    instead of a silent no-op (v1 accepted "FOODS" and excluded nothing)."""
+    by_cat: dict[str, list[str]] = {}
+    for d in departments:
+        by_cat.setdefault(d["cat_id"], []).append(d["dept_id"])
+    ids = {d["dept_id"] for d in departments}
+    out: set[str] = set()
+    for n in names or []:
+        key = str(n).strip().upper().replace(" ", "_")
+        if key in ids:
+            out.add(key)
+        elif key in by_cat:
+            out.update(by_cat[key])
+        else:
+            raise ValueError(f"unknown department {n!r}; valid ids {sorted(ids)} or categories {sorted(by_cat)}")
+    return sorted(out)
+
+
+def norm_absent(names) -> list[str]:
+    out = sorted({str(n).strip().upper() for n in names or []})
+    bad = [n for n in out if n not in ASSOCIATES]
+    if bad:
+        raise ValueError(f"unknown associate ids {bad}; valid ids {list(ASSOCIATES)}")
+    return out
 
 
 @dataclass
@@ -97,18 +135,24 @@ def make_tools(ctx: RunContext):
         exclude_departments: department ids to leave out (default none)."""
         args = {"store_id": store_id, "date": date, "include": include, "exclude_departments": exclude_departments}
         log("create_tasks", args)
+        store_id = norm_store(store_id)
         inc = tuple(include) if include else ("price", "restock", "reset")
         bad = [k for k in inc if k not in ("price", "restock", "reset")]
         if bad:
             return json.dumps({"error": f"unknown task kinds {bad}"})
-        tasks = st.build_tasks(store_id, date, inc, tuple(exclude_departments or ()))
+        try:
+            excluded = resolve_departments(exclude_departments, st.departments())
+        except ValueError as e:
+            return json.dumps({"error": str(e)})
+        tasks = st.build_tasks(store_id, date, inc, tuple(excluded))
         ctx.plan[store_id, date] = tasks
         by = {}
         for t in tasks:
             by.setdefault(t.kind, {"tasks": 0, "minutes": 0})
             by[t.kind]["tasks"] += 1
             by[t.kind]["minutes"] += t.duration
-        return json.dumps({"tasks": len(tasks), "high_priority": sum(t.tier == "high" for t in tasks),
+        return json.dumps({"tasks": len(tasks), "excluded_departments": excluded,
+                           "high_priority": sum(t.tier == "high" for t in tasks),
                            "total_minutes": sum(t.duration for t in tasks), "by_kind": by})
 
     @tool
@@ -117,10 +161,15 @@ def make_tools(ctx: RunContext):
         absent_associates: ids of associates who are out (default none)."""
         args = {"store_id": store_id, "date": date, "absent_associates": absent_associates}
         log("schedule_tasks", args)
+        store_id = norm_store(store_id)
+        try:
+            absent = norm_absent(absent_associates)
+        except ValueError as e:
+            return json.dumps({"error": str(e)})
         tasks = ctx.plan.get((store_id, date))
         if tasks is None:
             return json.dumps({"error": "call create_tasks for this store and date first"})
-        sch, info, summ, errs = st.schedule(store_id, tasks, tuple(absent_associates or ()))
+        sch, info, summ, errs = st.schedule(store_id, tasks, tuple(absent))
         ctx.schedules[store_id, date] = {"summary": summ, "task_ids": sorted(s.task_id for s in sch),
                                          "violations": len(errs)}
         unassigned_high = [t.task_id for t in tasks if t.tier == "high" and t.task_id not in {s.task_id for s in sch}]
@@ -144,6 +193,10 @@ def build_graph(llm, tools, max_steps: int = 8):
 
     def agent(state: AgentState):
         msg = bound.invoke(state["messages"])
+        if not msg.tool_calls and not (msg.content or "").strip():
+            # an empty turn (no text, no parsed tool call) gets one retry with a nudge
+            nudge = HumanMessage("Your last reply was empty. Call the tools you need, or give the final answer.")
+            msg = bound.invoke(state["messages"] + [msg, nudge])
         return {"messages": [msg], "steps": state["steps"] + 1}
 
     def run_tools(state: AgentState):
@@ -174,6 +227,13 @@ def build_graph(llm, tools, max_steps: int = 8):
 
 def make_llm(provider: str = "ollama", model: str = "qwen3:8b", base_url: str | None = None, temperature: float = 0):
     if provider == "ollama":
+        # v2: Ollama through its OpenAI compatible endpoint. With langchain-ollama 1.1.0 some qwen3
+        # tool calls came back as an empty message (all 8 call-out requests for qwen3:8b in v1);
+        # the same request through /v1 returns the tool call.
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(model=model, base_url=f"{base_url or 'http://localhost:11434'}/v1", api_key="ollama",
+                          temperature=temperature, reasoning_effort="none")
+    if provider == "ollama_native":  # v1 client
         from langchain_ollama import ChatOllama
         return ChatOllama(model=model, base_url=base_url or "http://localhost:11434", temperature=temperature,
                           reasoning=False, num_ctx=8192)

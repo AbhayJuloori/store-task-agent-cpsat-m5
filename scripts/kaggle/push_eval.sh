@@ -7,7 +7,7 @@ DS="$USER_NAME/store-task-agent-bundle"
 STAGE=$(mktemp -d)
 mkdir -p "$STAGE/dataset" "$STAGE/kernel" "$STAGE/bundle/data/work" "$STAGE/bundle/eval"
 cp -R src configs "$STAGE/bundle/"
-cp eval/scenarios.jsonl "$STAGE/bundle/eval/"
+cp eval/scenarios.jsonl eval/scenarios_holdout.jsonl "$STAGE/bundle/eval/"
 cp data/work/agent.duckdb "$STAGE/bundle/data/work/"
 find "$STAGE/bundle" -name __pycache__ -prune -exec rm -rf {} +
 tar -czf "$STAGE/dataset/bundle.tar.gz" -C "$STAGE/bundle" .

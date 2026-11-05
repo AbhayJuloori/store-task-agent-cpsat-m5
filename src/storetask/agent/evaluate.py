@@ -17,7 +17,9 @@ import re
 import time
 
 from ..config import ROOT
-from .graph import make_llm, run_agent
+from . import graph as graph_v2
+from . import graph_v1
+from .graph import make_llm, norm_absent, norm_store, resolve_departments
 from .planner import Store
 
 PLAN_KINDS = {"full_plan", "price_only", "exclude_dept", "absent", "combo"}
@@ -57,11 +59,16 @@ def score(sc: dict, run: dict, st: Store) -> dict:
         res["tool_ok"] = bool(ct and stc)
         if ct and stc:
             ca, sa = ct[-1]["args"], stc[-1]["args"]
-            res["args_ok"] = (ca.get("store_id") == g["store"] and ca.get("date") == g["date"]
+            try:  # same normalisation the v2 tools apply: store case, category names, associate case
+                ex = resolve_departments(ca.get("exclude_departments"), st.departments())
+                ab = norm_absent(sa.get("absent_associates"))
+            except ValueError:
+                ex, ab = None, None
+            res["args_ok"] = (norm_store(ca.get("store_id")) == g["store"] and ca.get("date") == g["date"]
                               and norm_include(ca.get("include")) == sorted(g["include"])
-                              and sorted(ca.get("exclude_departments") or []) == g["exclude"]
-                              and sa.get("store_id") == g["store"] and sa.get("date") == g["date"]
-                              and sorted(sa.get("absent_associates") or []) == g["absent"])
+                              and ex == g["exclude"]
+                              and norm_store(sa.get("store_id")) == g["store"] and sa.get("date") == g["date"]
+                              and ab == g["absent"])
         else:
             res["args_ok"] = False
         gp = gold_plan(st, g)
@@ -121,12 +128,14 @@ def main(argv=None):
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--out", default=None)
     ap.add_argument("--scenarios", default="scenarios.jsonl", help="file under eval/")
+    ap.add_argument("--agent", default="v2", choices=["v1", "v2"])
     args = ap.parse_args(argv)
     scen = [json.loads(line) for line in open(ROOT / "eval" / args.scenarios)]
     if args.limit:
         scen = scen[::max(1, len(scen) // args.limit)][:args.limit]
     st = Store()
     llm = make_llm(args.provider, args.model, args.base_url)
+    run_agent = (graph_v1 if args.agent == "v1" else graph_v2).run_agent
     rows = []
     t0 = time.time()
     for sc in scen:
@@ -138,7 +147,8 @@ def main(argv=None):
         rows.append(score(sc, run, st))
         print(f"{sc['id']:16s} success={rows[-1]['success']} {rows[-1]['latency_s']}s", flush=True)
     summ = summarize(rows)
-    summ.update({"model": args.model, "provider": args.provider, "wall_s": round(time.time() - t0, 1)})
+    summ.update({"model": args.model, "provider": args.provider, "agent": args.agent,
+                 "scenarios": args.scenarios, "wall_s": round(time.time() - t0, 1)})
     out = ROOT / "eval" / "results" / (args.out or args.model.replace(":", "_").replace("/", "_"))
     out.mkdir(parents=True, exist_ok=True)
     with open(out / "rows.jsonl", "w") as fh:
