@@ -43,7 +43,7 @@ def gold_numbers(st: Store, sc: dict) -> list[int]:
 
 
 def norm_include(v):
-    return sorted(v) if v else ALL
+    return sorted(v or ALL)
 
 
 def score(sc: dict, run: dict, st: Store) -> dict:
