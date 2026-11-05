@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=80.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "store-task-agent-cpsat-m5"
+version = "0.1.0"
+description = "Store task generation from Walmart M5 data, CP-SAT associate scheduling, and a LangGraph planning agent"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "duckdb==2.0.0",
+  "pandas==3.1.1",
+  "numpy==2.4.6",
+  "pyarrow==26.0.1",
+  "ortools==9.15.6755",
+  "pyyaml==6.0.3",
+  "langgraph==1.2.19",
+  "langchain-core==1.7.6",
+  "langchain-ollama==1.1.0",
+  "langchain-openai==1.7.4",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==9.2.0", "ruff==0.15.22"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 130
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B"]
+ignore = ["B019", "B905"]

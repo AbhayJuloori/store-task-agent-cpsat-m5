@@ -17,7 +17,6 @@ import math
 import time
 from dataclasses import dataclass
 
-import numpy as np
 from ortools.sat.python import cp_model
 
 from .layout import DEPOT, StoreLayout
@@ -349,7 +348,7 @@ def cpsat(tasks: list[Task], staff: list[Associate], layout: StoreLayout, time_l
             m.Add(sum(tasks[i].duration * x[a.id, i] for i in grp)
                   + sum(visit_cost[g] * w_[g] for g in dl_aisles) <= dl - a.start)
     done = []
-    for i, t in enumerate(tasks):
+    for i in range(len(tasks)):
         mine = [x[k] for k in x if k[1] == i]
         d = m.NewBoolVar(f"done_{i}")
         m.Add(sum(mine) == d) if mine else m.Add(d == 0)
